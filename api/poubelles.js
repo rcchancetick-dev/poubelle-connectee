@@ -1,5 +1,26 @@
+/**
+ * api/poubelles.js
+ * GET (public) -> liste des poubelles avec leur dernier niveau connu
+ * POST/PUT/DELETE (proteges) -> gestion des poubelles, reservee a l'admin authentifie
+ *
+ * NOUVEAU : accepte desormais un champ "intervalleSommeil" (en secondes) a
+ * la creation et a la modification d'une poubelle. Ce champ est renvoye a
+ * l'ESP32 par /api/enregistrer-niveau pour piloter son deep sleep a distance.
+ */
+
 import { obtenirPoubelles, enregistrerPoubelles, obtenirMesures, supprimerMesuresDe, dernierNiveauDe } from './_store.js';
 import { exigerAuthentification } from './_auth.js';
+
+const INTERVALLE_SOMMEIL_DEFAUT_SECONDES = 300;
+const INTERVALLE_SOMMEIL_MIN_SECONDES = 30; // garde-fou : empeche une valeur trop agressive (spam reseau/batterie)
+
+function normaliserIntervalle(valeur) {
+  const n = Number(valeur);
+  if (!Number.isFinite(n) || n < INTERVALLE_SOMMEIL_MIN_SECONDES) {
+    return INTERVALLE_SOMMEIL_DEFAUT_SECONDES;
+  }
+  return Math.round(n);
+}
 
 export default async function handler(req, res) {
   try {
@@ -15,7 +36,7 @@ export default async function handler(req, res) {
     if (!exigerAuthentification(req, res)) return;
 
     if (req.method === 'POST') {
-      const { nom, emplacement, hauteurCm, seuilAlerte, numeroAlerteSms } = req.body || {};
+      const { nom, emplacement, hauteurCm, seuilAlerte, numeroAlerteSms, intervalleSommeil } = req.body || {};
       if (!nom || !emplacement || !hauteurCm || !seuilAlerte) {
         return res.status(400).json({ erreur: 'Champs requis : nom, emplacement, hauteurCm, seuilAlerte' });
       }
@@ -26,6 +47,7 @@ export default async function handler(req, res) {
         id: nouvelId, nom, emplacement,
         hauteurCm: Number(hauteurCm), seuilAlerte: Number(seuilAlerte),
         numeroAlerteSms: numeroAlerteSms || null, derniereAdresseIp: null,
+        intervalleSommeil: normaliserIntervalle(intervalleSommeil),
       };
       poubelles.push(nouvellePoubelle);
       await enregistrerPoubelles(poubelles);
@@ -33,7 +55,7 @@ export default async function handler(req, res) {
     }
 
     if (req.method === 'PUT') {
-      const { id, nom, emplacement, hauteurCm, seuilAlerte, numeroAlerteSms } = req.body || {};
+      const { id, nom, emplacement, hauteurCm, seuilAlerte, numeroAlerteSms, intervalleSommeil } = req.body || {};
       const poubelles = await obtenirPoubelles();
       const poubelle = poubelles.find((p) => p.id === Number(id));
       if (!poubelle) return res.status(404).json({ erreur: 'Poubelle introuvable' });
@@ -43,6 +65,7 @@ export default async function handler(req, res) {
       if (hauteurCm) poubelle.hauteurCm = Number(hauteurCm);
       if (seuilAlerte) poubelle.seuilAlerte = Number(seuilAlerte);
       if (numeroAlerteSms !== undefined) poubelle.numeroAlerteSms = numeroAlerteSms;
+      if (intervalleSommeil !== undefined) poubelle.intervalleSommeil = normaliserIntervalle(intervalleSommeil);
 
       await enregistrerPoubelles(poubelles);
       return res.status(200).json({ succes: true, poubelle });
