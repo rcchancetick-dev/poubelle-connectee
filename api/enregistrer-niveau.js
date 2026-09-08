@@ -1,3 +1,15 @@
+/**
+ * api/enregistrer-niveau.js
+ * Endpoint appele par l'ESP32, protege par cle API partagee (x-api-key).
+ * Ecrit dans Redis (persistance des mesures et alertes).
+ *
+ * NOUVEAU : la reponse inclut desormais "intervalleSommeil" (en secondes),
+ * lu depuis la configuration de la poubelle. Le firmware ESP32 utilise
+ * cette valeur pour regler la duree de son prochain deep sleep, ce qui
+ * permet de changer la frequence de mesure depuis l'espace admin du site,
+ * sans jamais reflasher le module.
+ */
+
 import { obtenirPoubelles, enregistrerPoubelles, ajouterMesure, obtenirAlertes, enregistrerAlertes, obtenirCompteurs, enregistrerCompteurs, calculerNiveau } from './_store.js';
 import { envoyerSmsBefiana } from './_befiana.js';
 
@@ -40,7 +52,14 @@ export default async function handler(req, res) {
     poubelle.derniereAdresseIp = req.headers['x-forwarded-for']?.split(',')[0] || req.socket?.remoteAddress || null;
     await enregistrerPoubelles(poubelles);
 
-    const reponse = { succes: true, niveau: mesure.niveauPourcent, seuil: poubelle.seuilAlerte, alerte: false, smsEnvoye: false };
+    const reponse = {
+      succes: true,
+      niveau: mesure.niveauPourcent,
+      seuil: poubelle.seuilAlerte,
+      alerte: false,
+      smsEnvoye: false,
+      intervalleSommeil: poubelle.intervalleSommeil,
+    };
 
     if (niveau >= poubelle.seuilAlerte) {
       const alertes = await obtenirAlertes();
