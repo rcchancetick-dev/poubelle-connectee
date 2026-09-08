@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Plus, Trash2, Send, Settings, ListChecks, KeyRound, Clock } from 'lucide-react';
 import { usePoubelles } from '../hooks/usePoubelles.js';
+import HistoriqueAdmin from './HistoriqueAdmin.jsx';
 
 const formVide = { nom: '', emplacement: '', hauteurCm: 60, seuilAlerte: 80, numeroAlerteSms: '', intervalleSommeil: 300 };
 const mdpFormVide = { ancienMotDePasse: '', nouveauMotDePasse: '', confirmationMotDePasse: '' };
@@ -263,6 +264,8 @@ export default function Admin() {
           </ul>
         </motion.section>
       </div>
+
+      <HistoriqueAdmin />
     </div>
   );
 }
