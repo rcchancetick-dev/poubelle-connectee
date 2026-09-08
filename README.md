@@ -6,7 +6,7 @@ moderne (**React + Vite + Framer Motion**), deployable sur **Vercel**, avec des 
 **SMS automatiques via l'API BEFIANA** (Madagascar) des qu'une poubelle depasse son seuil
 de remplissage.
 
-Projet realise dans le cadre du mini-projet IoT — ESPA, Filiere Informatique L2,
+Projet realise dans le cadre du mini-projet IoT — ESPA, Electronique Informatique et Technologie,
 module Communication Numerique et Transmission.
 
 ## Sommaire
