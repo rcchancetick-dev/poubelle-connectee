@@ -11,11 +11,11 @@
 #include <HTTPClient.h>
 #include <ArduinoJson.h>
 
-const char* SSID_WIFI          = "NOM_DU_RESEAU_WIFI";
-const char* MOT_DE_PASSE_WIFI  = "MOT_DE_PASSE_WIFI";
+const char* SSID_WIFI          = "CT Link";
+const char* MOT_DE_PASSE_WIFI  = "Fa ainw bk";
 
-const char* URL_SERVEUR = "https://votre-projet.vercel.app/api/enregistrer-niveau";
-const char* CLE_API      = "change_moi_en_production";
+const char* URL_SERVEUR = "https://poubelle-connecte.vercel.app/api/enregistrer-niveau";
+const char* CLE_API      = "hzgdjfyrtqgaofjdgetsjeyfnxbflgyt";
 const int ID_POUBELLE     = 1;
 
 const int PIN_TRIG   = 5;
