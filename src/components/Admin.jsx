@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Plus, Trash2, Send, Settings, ListChecks, KeyRound } from 'lucide-react';
+import { Plus, Trash2, Send, Settings, ListChecks, KeyRound, Clock } from 'lucide-react';
 import { usePoubelles } from '../hooks/usePoubelles.js';
 
-const formVide = { nom: '', emplacement: '', hauteurCm: 60, seuilAlerte: 80, numeroAlerteSms: '' };
+const formVide = { nom: '', emplacement: '', hauteurCm: 60, seuilAlerte: 80, numeroAlerteSms: '', intervalleSommeil: 300 };
 const mdpFormVide = { ancienMotDePasse: '', nouveauMotDePasse: '', confirmationMotDePasse: '' };
 
 export default function Admin() {
@@ -19,6 +19,9 @@ export default function Admin() {
   const [mdpFormulaire, setMdpFormulaire] = useState(mdpFormVide);
   const [mdpStatut, setMdpStatut] = useState(null);
   const [mdpEnvoiEnCours, setMdpEnvoiEnCours] = useState(false);
+
+  const [intervallesModifies, setIntervallesModifies] = useState({});
+  const [intervalleStatut, setIntervalleStatut] = useState({});
 
   function chargerLogs() {
     fetch('/api/sms-logs').then((r) => r.json()).then((d) => setLogs(d.logs || []));
@@ -52,6 +55,22 @@ export default function Admin() {
   async function supprimerPoubelle(id) {
     await fetch(`/api/poubelles?id=${id}`, { method: 'DELETE' });
     rafraichir();
+  }
+
+  async function enregistrerIntervalle(poubelle) {
+    const nouvelleValeur = intervallesModifies[poubelle.id] ?? poubelle.intervalleSommeil;
+    setIntervalleStatut((s) => ({ ...s, [poubelle.id]: 'envoi' }));
+    try {
+      const reponse = await fetch('/api/poubelles', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: poubelle.id, intervalleSommeil: nouvelleValeur }),
+      });
+      setIntervalleStatut((s) => ({ ...s, [poubelle.id]: reponse.ok ? 'succes' : 'erreur' }));
+      rafraichir();
+    } catch {
+      setIntervalleStatut((s) => ({ ...s, [poubelle.id]: 'erreur' }));
+    }
   }
 
   async function envoyerSmsTest(e) {
@@ -136,6 +155,9 @@ export default function Admin() {
             <label>Numero SMS d'alerte (sans le 0 initial, ex: 321234567)
               <input placeholder="321234567" value={formulaire.numeroAlerteSms} onChange={(e) => setFormulaire({ ...formulaire, numeroAlerteSms: e.target.value })} />
             </label>
+            <label>Intervalle entre deux mesures ESP32 (secondes, 30 minimum)
+              <input type="number" min={30} required value={formulaire.intervalleSommeil} onChange={(e) => setFormulaire({ ...formulaire, intervalleSommeil: e.target.value })} />
+            </label>
             <motion.button whileTap={{ scale: 0.96 }} className="bouton-principal" disabled={envoiEnCours} type="submit">
               {envoiEnCours ? 'Ajout en cours...' : 'Ajouter la poubelle'}
             </motion.button>
@@ -155,6 +177,37 @@ export default function Admin() {
                 <button className="bouton-icone bouton-icone--danger" onClick={() => supprimerPoubelle(p.id)}>
                   <Trash2 size={15} />
                 </button>
+              </li>
+            ))}
+          </ul>
+        </motion.section>
+
+        <motion.section className="carte-panneau" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.25 }}>
+          <h2><Clock size={16} /> Intervalle de mesure ESP32</h2>
+          <p className="texte-vide" style={{ marginBottom: '0.6rem' }}>
+            Reglez la duree (en secondes) entre deux reveils de chaque module ESP32.
+            Le firmware recupere automatiquement cette valeur a chaque envoi de mesure —
+            aucun reflashage necessaire. 30 s minimum.
+          </p>
+          <ul className="liste-poubelles-admin">
+            {poubelles.map((p) => (
+              <li key={p.id}>
+                <div>
+                  <strong>{p.nom}</strong>
+                  <p>Actuel : {p.intervalleSommeil ?? 300} s</p>
+                </div>
+                <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
+                  <input
+                    type="number"
+                    min={30}
+                    style={{ width: '90px', minHeight: '38px', border: '1px solid var(--bordure)', borderRadius: '8px', padding: '0.4rem' }}
+                    defaultValue={p.intervalleSommeil ?? 300}
+                    onChange={(e) => setIntervallesModifies((s) => ({ ...s, [p.id]: e.target.value }))}
+                  />
+                  <button className="bouton-secondaire" onClick={() => enregistrerIntervalle(p)}>
+                    {intervalleStatut[p.id] === 'envoi' ? '...' : 'Appliquer'}
+                  </button>
+                </div>
               </li>
             ))}
           </ul>
