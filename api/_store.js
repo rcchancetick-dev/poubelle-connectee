@@ -7,6 +7,14 @@
  * serverless. Sur Vercel, chaque fonction peut redemarrer a froid ou etre
  * routee vers une instance differente a tout moment : Redis (Upstash) est
  * un stockage externe qui survit a ces redemarrages.
+ *
+ * NOUVEAU : chaque poubelle possede desormais un champ "intervalleSommeil"
+ * (en secondes), pilotable depuis l'espace admin du site. Ce champ est
+ * renvoye a l'ESP32 dans la reponse de /api/enregistrer-niveau, qui l'utilise
+ * pour regler la duree de son prochain deep sleep -- sans jamais reflasher
+ * le firmware. Seuls le Wi-Fi, l'URL du serveur et la cle API restent geres
+ * uniquement cote firmware (impossible de les piloter a distance, puisque
+ * l'ESP32 en a besoin avant meme de pouvoir contacter le serveur).
  */
 
 import { Redis } from '@upstash/redis';
@@ -31,10 +39,14 @@ function redis() {
   return redisInstance;
 }
 
+// Intervalle de sommeil par defaut (secondes) applique aux nouvelles poubelles
+// et utilise comme valeur de repli si le champ est absent d'une poubelle existante.
+const INTERVALLE_SOMMEIL_DEFAUT_SECONDES = 300; // 5 minutes
+
 const DONNEES_DEMO_POUBELLES = [
-  { id: 1, nom: 'Poubelle Bibliotheque', emplacement: 'Entree principale - Bibliotheque', hauteurCm: 60, seuilAlerte: 80, numeroAlerteSms: '321234567', derniereAdresseIp: null },
-  { id: 2, nom: 'Poubelle Cafeteria', emplacement: 'Cour centrale - Cafeteria', hauteurCm: 50, seuilAlerte: 75, numeroAlerteSms: '321234567', derniereAdresseIp: null },
-  { id: 3, nom: 'Poubelle Amphitheatre', emplacement: 'Batiment A - Amphitheatre 1', hauteurCm: 55, seuilAlerte: 80, numeroAlerteSms: '321234567', derniereAdresseIp: null },
+  { id: 1, nom: 'Poubelle Bibliotheque', emplacement: 'Entree principale - Bibliotheque', hauteurCm: 60, seuilAlerte: 80, numeroAlerteSms: '321234567', derniereAdresseIp: null, intervalleSommeil: 300 },
+  { id: 2, nom: 'Poubelle Cafeteria', emplacement: 'Cour centrale - Cafeteria', hauteurCm: 50, seuilAlerte: 75, numeroAlerteSms: '321234567', derniereAdresseIp: null, intervalleSommeil: 300 },
+  { id: 3, nom: 'Poubelle Amphitheatre', emplacement: 'Batiment A - Amphitheatre 1', hauteurCm: 55, seuilAlerte: 80, numeroAlerteSms: '321234567', derniereAdresseIp: null, intervalleSommeil: 300 },
 ];
 
 async function initialiserSiVide() {
@@ -100,7 +112,13 @@ export async function definirHashAdmin(nouveauHash) {
 export async function obtenirPoubelles() {
   const r = redis();
   await initialiserSiVide();
-  return (await r.get('poubelles')) || [];
+  const poubelles = (await r.get('poubelles')) || [];
+  // Retro-compatibilite : garantit un intervalleSommeil meme sur des
+  // poubelles creees avant l'ajout de ce champ.
+  return poubelles.map((p) => ({
+    intervalleSommeil: INTERVALLE_SOMMEIL_DEFAUT_SECONDES,
+    ...p,
+  }));
 }
 
 export async function enregistrerPoubelles(poubelles) {
