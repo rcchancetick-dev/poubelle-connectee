@@ -32,8 +32,8 @@
 // avant meme de pouvoir contacter le serveur, donc impossible de les piloter
 // a distance (contrairement a l'intervalle de sommeil, voir plus bas).
 // =============================================================================
-const char* SSID_WIFI          = "NOM_DU_RESEAU_WIFI";       // <-- reprenez votre valeur actuelle
-const char* MOT_DE_PASSE_WIFI  = "MOT_DE_PASSE_WIFI";        // <-- reprenez votre valeur actuelle
+const char* SSID_WIFI          = "CT Link";       // <-- reprenez votre valeur actuelle
+const char* MOT_DE_PASSE_WIFI  = "Fa ainw bk";        // <-- reprenez votre valeur actuelle
 
 // =============================================================================
 // 2. CONFIGURATION SERVEUR
@@ -42,8 +42,8 @@ const char* MOT_DE_PASSE_WIFI  = "MOT_DE_PASSE_WIFI";        // <-- reprenez vot
 // il faut savoir OU envoyer la requete et comment s'authentifier avant
 // meme le tout premier contact avec l'API.
 // =============================================================================
-const char* URL_SERVEUR = "https://votre-projet.vercel.app/api/enregistrer-niveau"; // <-- reprenez votre URL actuelle
-const char* CLE_API      = "change_moi_en_production";                              // <-- doit correspondre a ESP32_API_KEY sur Vercel
+const char* URL_SERVEUR = "https://poubelle-connecte.vercel.app/api/enregistrer-niveau"; // <-- reprenez votre URL actuelle
+const char* CLE_API      = "hzgdjfyrtqgaofjdgetsjeyfnxbflgyt";                              // <-- doit correspondre a ESP32_API_KEY sur Vercel
 const int ID_POUBELLE     = 1; // identifiant de la poubelle cote backend (1, 2 ou 3 par defaut)
 
 // =============================================================================
