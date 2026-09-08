@@ -27,7 +27,7 @@ export default function App() {
         </AnimatePresence>
       </main>
       <footer className="app-pied">
-        <p>ESPA — Filiere Informatique L2 — Communication Numerique et Transmission</p>
+        <p>ESPA — Electronique Informatique et Technologie — Communication Numerique et Transmission</p>
         <p>ESP32 + HC-SR04 + React + API SMS BEFIANA + Persistance Redis (Upstash)</p>
       </footer>
     </div>
