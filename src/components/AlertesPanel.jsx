@@ -1,7 +1,28 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { BellRing, CheckCircle2, MessageSquareText } from 'lucide-react';
 
+/**
+ * AlertesPanel.jsx
+ * NOUVEAU : le bouton "Traiter" demande desormais une confirmation explicite
+ * (window.confirm) avant de clore l'alerte, pour eviter un clic accidentel
+ * qui ferait disparaitre une alerte encore pertinente sans intervention reelle
+ * de l'agent de collecte.
+ */
+
 export default function AlertesPanel({ alertes, onTraiter, authentifie }) {
+  function demanderConfirmationEtTraiter(alerte) {
+    const message =
+      `Confirmer le traitement de cette alerte ?\n\n` +
+      `Poubelle : ${alerte.poubelleNom}\n` +
+      `Niveau : ${alerte.niveauPourcent.toFixed(0)}%\n` +
+      `Date : ${new Date(alerte.dateAlerte).toLocaleString('fr-FR')}\n\n` +
+      `Cette action indique que la poubelle a bien ete videe ou prise en charge.`;
+
+    if (window.confirm(message)) {
+      onTraiter(alerte.id);
+    }
+  }
+
   return (
     <motion.section className="panneau-alertes" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.15 }}>
       <div className="panneau-alertes__entete">
@@ -25,7 +46,7 @@ export default function AlertesPanel({ alertes, onTraiter, authentifie }) {
                   </span>
                 </div>
                 {authentifie && (
-                  <button className="bouton-secondaire" onClick={() => onTraiter(alerte.id)}>
+                  <button className="bouton-secondaire" onClick={() => demanderConfirmationEtTraiter(alerte)}>
                     <CheckCircle2 size={14} /> Traiter
                   </button>
                 )}
