@@ -1,9 +1,12 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { couleurs } from '../theme/colors';
+import { useTheme } from '../theme/ThemeContext';
 
 export default function CarteAlerte({ alerte, onTraiter, authentifie }) {
+  const { couleurs } = useTheme();
+  const styles = creerStyles(couleurs);
+
   function demanderConfirmation() {
     Alert.alert(
       'Confirmer le traitement',
@@ -22,7 +25,7 @@ export default function CarteAlerte({ alerte, onTraiter, authentifie }) {
         <Text style={styles.details}>
           {alerte.niveauPourcent.toFixed(0)}% — {new Date(alerte.dateAlerte).toLocaleString('fr-FR')}
         </Text>
-        <View style={[styles.etiquette, alerte.smsEnvoye ? styles.etiquetteOk : styles.etiquetteKo]}>
+        <View style={[styles.etiquette, { backgroundColor: (alerte.smsEnvoye ? couleurs.vert : couleurs.rouge) + '22' }]}>
           <Ionicons name="chatbubble-ellipses-outline" size={11} color={alerte.smsEnvoye ? couleurs.vert : couleurs.rouge} />
           <Text style={[styles.etiquetteTexte, { color: alerte.smsEnvoye ? couleurs.vert : couleurs.rouge }]}>
             {alerte.smsEnvoye ? 'SMS envoyé' : 'SMS non envoyé'}
@@ -39,17 +42,17 @@ export default function CarteAlerte({ alerte, onTraiter, authentifie }) {
   );
 }
 
-const styles = StyleSheet.create({
-  ligne: {
-    flexDirection: 'row', alignItems: 'center', backgroundColor: '#fbfbfd', borderWidth: 1,
-    borderColor: couleurs.bordure, borderRadius: 12, padding: 12, marginBottom: 8, gap: 8,
-  },
-  nom: { fontSize: 13, fontWeight: '700', color: couleurs.texte },
-  details: { fontSize: 11, color: couleurs.texteAtt, marginTop: 2, marginBottom: 5 },
-  etiquette: { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 20 },
-  etiquetteOk: { backgroundColor: 'rgba(34,197,94,0.12)' },
-  etiquetteKo: { backgroundColor: 'rgba(239,68,68,0.12)' },
-  etiquetteTexte: { fontSize: 10, fontWeight: '700', marginLeft: 4 },
-  bouton: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: 'white', borderWidth: 1, borderColor: couleurs.bordure, borderRadius: 10, paddingHorizontal: 10, paddingVertical: 8 },
-  boutonTexte: { fontSize: 12, fontWeight: '600', color: couleurs.texte, marginLeft: 4 },
-});
+function creerStyles(couleurs) {
+  return StyleSheet.create({
+    ligne: {
+      flexDirection: 'row', alignItems: 'center', backgroundColor: couleurs.carte, borderWidth: 1,
+      borderColor: couleurs.bordure, borderRadius: 12, padding: 12, marginBottom: 8, gap: 8,
+    },
+    nom: { fontSize: 13, fontWeight: '700', color: couleurs.texte },
+    details: { fontSize: 11, color: couleurs.texteAtt, marginTop: 2, marginBottom: 5 },
+    etiquette: { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 20 },
+    etiquetteTexte: { fontSize: 10, fontWeight: '700', marginLeft: 4 },
+    bouton: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: couleurs.fond, borderWidth: 1, borderColor: couleurs.bordure, borderRadius: 10, paddingHorizontal: 10, paddingVertical: 8 },
+    boutonTexte: { fontSize: 12, fontWeight: '700', color: couleurs.texte, marginLeft: 4 },
+  });
+}
