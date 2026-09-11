@@ -4,46 +4,48 @@ Application mobile compagnon du tableau de bord web, permettant de consulter
 et gerer le systeme de poubelles connectees depuis un smartphone (Android/iOS),
 avec **synchronisation en temps reel** sur la meme base de donnees que le site.
 
+## Nouveautes de cette version
+
+- **Export PDF et Excel natifs sur mobile** (auparavant limites au web) :
+  l'onglet "Historique" propose desormais deux boutons d'export fonctionnels
+  directement sur le telephone.
+- **Mode sombre / mode clair**, avec un troisieme choix "Systeme" qui suit
+  automatiquement le reglage du telephone. Toutes les couleurs de texte ont
+  ete choisies pour rester parfaitement lisibles dans les deux modes.
+
 ## Comment fonctionne la synchronisation
 
 L'application mobile ne possede **aucune base de donnees propre**. Elle
 consomme exactement les memes endpoints API que le site web deploye sur
 Vercel (`https://poubelle-connectee.vercel.app/api/*`), qui lisent et
-ecrivent dans la meme base Upstash Redis. Concretement :
-
-- Une mesure envoyee par l'ESP32 apparait sur le site **et** sur l'app,
-  au prochain cycle de rafraichissement (toutes les 15 secondes, identique
-  au comportement web).
-- Une action effectuee sur l'app (traiter une alerte, ajouter une poubelle,
-  changer le mot de passe, regler l'intervalle de mesure) est immediatement
-  visible sur le site, et inversement.
-- Il n'y a donc pas de "synchronisation" a proprement parler a coder : les
-  deux clients (web et mobile) sont simplement deux vues du meme etat
-  serveur, comme deux onglets de navigateur ouverts sur le meme site.
+ecrivent dans la meme base Upstash Redis.
 
 ## Fonctionnalites
 
 ### Onglet "Tableau de bord" (public, sans connexion)
-- Jauges circulaires animees pour chaque poubelle (niveau, couleur selon seuil).
-- Historique graphique au clic sur une poubelle (courbe des 50 dernieres mesures).
+- Jauges circulaires animees, code couleur adapte au theme actif.
+- Historique graphique au clic sur une poubelle.
 - Panneau des alertes en attente, avec statut d'envoi SMS.
-- Rafraichissement automatique toutes les 15 secondes, avec pause en arriere-plan.
+- Rafraichissement automatique toutes les 15 secondes.
 
 ### Onglet "Historique" (necessite une connexion admin)
-- Liste complete des alertes "poubelle pleine", triable par nom, date ou
-  intervalle entre deux alertes.
-- Tirer vers le bas pour rafraichir (pull-to-refresh natif).
+- Liste complete des alertes, triable par nom, date ou intervalle.
+- **Export PDF** : genere un document avec un tableau recapitulatif
+  (nombre d'alertes par poubelle) suivi du detail complet, via `expo-print`
+  (rendu HTML natif). Ouvre ensuite la feuille de partage du telephone
+  (enregistrer, envoyer par email/WhatsApp, imprimer...).
+- **Export Excel** : genere un classeur `.xlsx` a deux feuilles
+  (Historique + Statistiques), via `xlsx` (SheetJS) + `expo-file-system`,
+  puis ouvre la meme feuille de partage.
+- Tirer vers le bas pour rafraichir.
 
 ### Onglet "Administration" (necessite une connexion admin)
-- Connexion par mot de passe (memes identifiants que le site web).
-- Ajout, consultation et suppression des poubelles.
-- Reglage de l'intervalle de mesure de l'ESP32 (memes garde-fous que le site).
-- Test d'envoi de SMS via l'API BEFIANA.
-- Changement du mot de passe administrateur.
-- Deconnexion.
+- **Section "Apparence"** : trois boutons (Systeme / Clair / Sombre) pour
+  choisir le theme. Le choix est memorise et applique immediatement.
+- Connexion par mot de passe, CRUD des poubelles, reglage de l'intervalle
+  de mesure ESP32, test d'envoi SMS, changement du mot de passe.
 
-Le bouton "Traiter" d'une alerte declenche une confirmation native
-(`Alert.alert`), comme sur le site web.
+Le bouton "Traiter" d'une alerte declenche une confirmation native.
 
 ## Prerequis
 
@@ -59,42 +61,64 @@ npm install
 npx expo start
 ```
 
-Un QR code s'affiche dans le terminal : scannez-le avec l'application
-**Expo Go** pour lancer l'application sur votre telephone, connecte au
-meme reseau Wi-Fi que votre ordinateur.
+## Details techniques des exports
+
+Contrairement au web (qui utilise `jsPDF` + `html2canvas` + `xlsx`
+directement dans le navigateur), ces bibliotheques ne fonctionnent pas sur
+React Native. L'implementation mobile (`src/services/export.js`) utilise :
+
+- **PDF** : `expo-print` convertit une chaine HTML en PDF via le moteur de
+  rendu natif du systeme (WebView), sans dependance externe.
+- **Excel** : `xlsx` (SheetJS) genere le classeur encode en base64 (pas
+  d'acces disque direct possible depuis le JS pur en React Native),
+  `expo-file-system` ecrit ce contenu dans le cache de l'application.
+- **Partage** : dans les deux cas, `expo-sharing` ouvre la feuille de
+  partage native (Android : "Partager via...", iOS : feuille d'action),
+  permettant d'enregistrer le fichier, de l'envoyer par email/WhatsApp, ou
+  de l'ouvrir dans une autre application (Excel, Adobe Acrobat, etc.).
+
+Ces trois modules (`expo-print`, `expo-sharing`, `expo-file-system`) sont
+deja references dans `package.json` : `npm install` suffit, aucune
+configuration native supplementaire n'est necessaire (ils fonctionnent
+directement dans Expo Go).
+
+## Details techniques du mode sombre/clair
+
+`src/theme/ThemeContext.js` expose un hook `useTheme()` accessible partout
+dans l'application, avec :
+
+- `couleurs` : la palette active (`clair` ou `sombre`), a utiliser dans
+  chaque composant au lieu de couleurs codees en dur.
+- `modeActif` : `'clair'` ou `'sombre'`, calcule a partir de la preference
+  et du reglage systeme du telephone (`useColorScheme`).
+- `preference` et `definirPreference()` : pour lire/modifier le choix de
+  l'utilisateur (`'systeme'`, `'clair'` ou `'sombre'`), memorise via
+  `AsyncStorage` et applique au demarrage suivant.
+
+Les couleurs de texte ont ete choisies avec un contraste eleve dans les
+deux modes :
+- Mode clair : texte quasi noir (`#0f172a`) sur fond blanc/gris tres clair.
+- Mode sombre : texte quasi blanc (`#f8fafc`) sur fond bleu-nuit tres
+  fonce (`#0f172a`), en evitant le piege frequent du gris moyen sur gris
+  moyen qui rend un dark mode illisible.
+
+Le composant `SelecteurTheme.js` (visible dans l'onglet Administration,
+section "Apparence") permet de changer de mode a tout moment.
 
 ## Configuration de l'URL de l'API
-
-L'URL du backend est definie dans `app.json`, section `expo.extra.apiBaseUrl` :
 
 ```json
 "extra": {
   "apiBaseUrl": "https://poubelle-connectee.vercel.app"
 }
 ```
+dans `app.json`.
 
-Remplacez cette valeur par l'URL exacte de votre deploiement Vercel si elle
-differe. Aucune autre modification n'est necessaire.
+## Authentification, cookies et CORS
 
-## Authentification et cookies
-
-L'espace admin du site utilise un cookie de session `httpOnly` (JWT). React
-Native gere nativement les cookies via son implementation de `fetch`
-(`credentials: 'include'`), donc la connexion fonctionne comme sur le site,
-sans configuration supplementaire.
-
-## A propos de CORS
-
-Contrairement a un navigateur web, une application mobile native n'est
-**pas soumise a la politique CORS**. Les appels a l'API Vercel depuis l'app
-fonctionnent donc directement, sans modifier `vercel.json`.
-
-## Limite connue : export PDF/Excel
-
-L'export PDF/Excel de l'historique (avec graphique) reste une fonctionnalite
-web (bibliotheques specifiquement navigateur : jsPDF, html2canvas, xlsx).
-Pour generer ces exports, ouvrez le site web depuis un navigateur. L'onglet
-"Historique" de l'app reste disponible en lecture pour la consultation rapide.
+Identique aux versions precedentes : cookie `httpOnly` gere nativement par
+`fetch` (`credentials: 'include'`), et aucune contrainte CORS pour une app
+mobile native (contrairement a un navigateur web).
 
 ## Construire une version installable (APK / IPA)
 
@@ -110,15 +134,21 @@ eas build --platform ios
 
 ```
 mobile/
-├── App.js
-├── app.json
-├── babel.config.js
-├── package.json
+├── App.js                              Point d'entree, ThemeProvider + navigation
+├── app.json / babel.config.js / package.json
 ├── src/
-│   ├── config/api.js
+│   ├── config/api.js                    Client HTTP partage avec le web
 │   ├── hooks/ (usePoubelles.js, useAuth.js)
-│   ├── theme/colors.js
-│   ├── components/ (CarteJauge.js, CarteAlerte.js)
-│   └── screens/ (DashboardScreen.js, LoginScreen.js, AdminScreen.js, HistoriqueScreen.js)
+│   ├── theme/
+│   │   └── ThemeContext.js              Mode clair/sombre (NOUVEAU)
+│   ├── services/
+│   │   └── export.js                    Export PDF/Excel natifs (NOUVEAU)
+│   ├── components/
+│   │   ├── CarteJauge.js, CarteAlerte.js
+│   │   └── SelecteurTheme.js            Bascule clair/sombre/systeme (NOUVEAU)
+│   └── screens/
+│       ├── DashboardScreen.js, LoginScreen.js
+│       ├── AdminScreen.js                Inclut la section "Apparence"
+│       └── HistoriqueScreen.js           Inclut les boutons d'export
 └── README.md
 ```

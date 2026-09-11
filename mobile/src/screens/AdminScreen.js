@@ -5,11 +5,14 @@ import { usePoubelles } from '../hooks/usePoubelles';
 import { useAuth } from '../hooks/useAuth';
 import { api } from '../config/api';
 import LoginScreen from './LoginScreen';
-import { couleurs } from '../theme/colors';
+import { useTheme } from '../theme/ThemeContext';
+import SelecteurTheme from '../components/SelecteurTheme';
 
 const formVide = { nom: '', emplacement: '', hauteurCm: '60', seuilAlerte: '80', numeroAlerteSms: '', intervalleSommeil: '300' };
 
 export default function AdminScreen() {
+  const { couleurs } = useTheme();
+  const styles = creerStyles(couleurs);
   const { authentifie, chargement: chargementAuth, connexion, deconnexion } = useAuth();
   const { poubelles, rafraichir } = usePoubelles();
 
@@ -110,6 +113,35 @@ export default function AdminScreen() {
     }
   }
 
+  function Section({ titre, icone, children }) {
+    return (
+      <View style={styles.section}>
+        <View style={styles.sectionEntete}>
+          <Ionicons name={icone} size={16} color={couleurs.bleu} />
+          <Text style={styles.sectionTitre}>{titre}</Text>
+        </View>
+        {children}
+      </View>
+    );
+  }
+
+  function Champ({ label, flex, ...props }) {
+    return (
+      <View style={[{ marginBottom: 10 }, flex && { flex: 1 }]}>
+        <Text style={styles.label}>{label}</Text>
+        <TextInput style={styles.input} placeholderTextColor={couleurs.texteAtt} {...props} />
+      </View>
+    );
+  }
+
+  function BoutonPrincipal({ texte, onPress, disabled }) {
+    return (
+      <TouchableOpacity style={[styles.boutonPrincipal, disabled && { opacity: 0.6 }]} onPress={onPress} disabled={disabled}>
+        <Text style={styles.boutonPrincipalTexte}>{texte}</Text>
+      </TouchableOpacity>
+    );
+  }
+
   return (
     <ScrollView style={styles.conteneur} contentContainerStyle={{ padding: 12 }}>
       <View style={styles.enteteRow}>
@@ -119,6 +151,10 @@ export default function AdminScreen() {
           <Text style={styles.texteDeconnexion}>Déconnexion</Text>
         </TouchableOpacity>
       </View>
+
+      <Section titre="Apparence" icone="color-palette-outline">
+        <SelecteurTheme />
+      </Section>
 
       <Section titre="Ajouter une poubelle" icone="add-circle-outline">
         <Champ label="Nom" value={formulaire.nom} onChangeText={(v) => setFormulaire({ ...formulaire, nom: v })} />
@@ -142,6 +178,7 @@ export default function AdminScreen() {
                 <TextInput
                   style={styles.champIntervalle}
                   keyboardType="numeric"
+                  placeholderTextColor={couleurs.texteAtt}
                   defaultValue={String(p.intervalleSommeil ?? 300)}
                   onChangeText={(v) => setIntervalles((s) => ({ ...s, [p.id]: v }))}
                 />
@@ -176,58 +213,31 @@ export default function AdminScreen() {
   );
 }
 
-function Section({ titre, icone, children }) {
-  return (
-    <View style={styles.section}>
-      <View style={styles.sectionEntete}>
-        <Ionicons name={icone} size={16} color={couleurs.bleu} />
-        <Text style={styles.sectionTitre}>{titre}</Text>
-      </View>
-      {children}
-    </View>
-  );
+function creerStyles(couleurs) {
+  return StyleSheet.create({
+    conteneur: { flex: 1, backgroundColor: couleurs.fond },
+    centre: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: couleurs.fond },
+    enteteRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
+    titre: { fontSize: 20, fontWeight: '800', color: couleurs.texte },
+    boutonDeconnexion: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+    texteDeconnexion: { color: couleurs.rouge, fontWeight: '700', fontSize: 12, marginLeft: 4 },
+    section: { backgroundColor: couleurs.carte, borderRadius: 16, padding: 14, marginBottom: 12, borderWidth: 1, borderColor: couleurs.bordure },
+    sectionEntete: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 10 },
+    sectionTitre: { fontSize: 14, fontWeight: '700', color: couleurs.texte, marginLeft: 6 },
+    label: { fontSize: 11, fontWeight: '700', color: couleurs.texteAtt, marginBottom: 4 },
+    input: { borderWidth: 1, borderColor: couleurs.bordure, borderRadius: 10, paddingHorizontal: 10, paddingVertical: 9, fontSize: 13, color: couleurs.texte, backgroundColor: couleurs.inputFond },
+    ligne2col: { flexDirection: 'row', gap: 10 },
+    boutonPrincipal: { backgroundColor: couleurs.bleu, borderRadius: 10, paddingVertical: 12, alignItems: 'center', marginTop: 4 },
+    boutonPrincipalTexte: { color: '#ffffff', fontWeight: '700', fontSize: 13 },
+    lignePoubelle: { flexDirection: 'row', backgroundColor: couleurs.fond, borderRadius: 12, padding: 10, marginBottom: 8, borderWidth: 1, borderColor: couleurs.bordure },
+    nomPoubelle: { fontSize: 13, fontWeight: '700', color: couleurs.texte },
+    detailPoubelle: { fontSize: 11, color: couleurs.texteAtt, marginTop: 2, marginBottom: 6 },
+    ligneIntervalle: { flexDirection: 'row', gap: 6 },
+    champIntervalle: { borderWidth: 1, borderColor: couleurs.bordure, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 6, width: 70, fontSize: 12, color: couleurs.texte, backgroundColor: couleurs.inputFond },
+    boutonMini: { backgroundColor: couleurs.carte, borderWidth: 1, borderColor: couleurs.bordure, borderRadius: 8, paddingHorizontal: 10, justifyContent: 'center' },
+    boutonMiniTexte: { fontSize: 11, fontWeight: '700', color: couleurs.texte },
+    boutonSupprimer: { justifyContent: 'center', paddingLeft: 8 },
+    texteSucces: { color: couleurs.vert, fontSize: 12, fontWeight: '700', marginTop: 8 },
+    texteErreur: { color: couleurs.rouge, fontSize: 12, fontWeight: '700', marginTop: 8 },
+  });
 }
-
-function Champ({ label, flex, ...props }) {
-  return (
-    <View style={[{ marginBottom: 10 }, flex && { flex: 1 }]}>
-      <Text style={styles.label}>{label}</Text>
-      <TextInput style={styles.input} {...props} />
-    </View>
-  );
-}
-
-function BoutonPrincipal({ texte, onPress, disabled }) {
-  return (
-    <TouchableOpacity style={[styles.boutonPrincipal, disabled && { opacity: 0.6 }]} onPress={onPress} disabled={disabled}>
-      <Text style={styles.boutonPrincipalTexte}>{texte}</Text>
-    </TouchableOpacity>
-  );
-}
-
-const styles = StyleSheet.create({
-  conteneur: { flex: 1, backgroundColor: couleurs.fond },
-  centre: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: couleurs.fond },
-  enteteRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
-  titre: { fontSize: 20, fontWeight: '800', color: couleurs.texte },
-  boutonDeconnexion: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  texteDeconnexion: { color: couleurs.rouge, fontWeight: '600', fontSize: 12, marginLeft: 4 },
-  section: { backgroundColor: 'white', borderRadius: 16, padding: 14, marginBottom: 12, borderWidth: 1, borderColor: couleurs.bordure },
-  sectionEntete: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 10 },
-  sectionTitre: { fontSize: 14, fontWeight: '700', color: couleurs.texte, marginLeft: 6 },
-  label: { fontSize: 11, fontWeight: '600', color: couleurs.texteAtt, marginBottom: 4 },
-  input: { borderWidth: 1, borderColor: couleurs.bordure, borderRadius: 10, paddingHorizontal: 10, paddingVertical: 9, fontSize: 13 },
-  ligne2col: { flexDirection: 'row', gap: 10 },
-  boutonPrincipal: { backgroundColor: couleurs.bleu, borderRadius: 10, paddingVertical: 12, alignItems: 'center', marginTop: 4 },
-  boutonPrincipalTexte: { color: 'white', fontWeight: '700', fontSize: 13 },
-  lignePoubelle: { flexDirection: 'row', backgroundColor: '#fbfbfd', borderRadius: 12, padding: 10, marginBottom: 8, borderWidth: 1, borderColor: couleurs.bordure },
-  nomPoubelle: { fontSize: 13, fontWeight: '700', color: couleurs.texte },
-  detailPoubelle: { fontSize: 11, color: couleurs.texteAtt, marginTop: 2, marginBottom: 6 },
-  ligneIntervalle: { flexDirection: 'row', gap: 6 },
-  champIntervalle: { borderWidth: 1, borderColor: couleurs.bordure, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 6, width: 70, fontSize: 12 },
-  boutonMini: { backgroundColor: 'white', borderWidth: 1, borderColor: couleurs.bordure, borderRadius: 8, paddingHorizontal: 10, justifyContent: 'center' },
-  boutonMiniTexte: { fontSize: 11, fontWeight: '600', color: couleurs.texte },
-  boutonSupprimer: { justifyContent: 'center', paddingLeft: 8 },
-  texteSucces: { color: couleurs.vert, fontSize: 12, fontWeight: '600', marginTop: 8 },
-  texteErreur: { color: couleurs.rouge, fontSize: 12, fontWeight: '600', marginTop: 8 },
-});
