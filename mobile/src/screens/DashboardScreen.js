@@ -7,17 +7,20 @@ import { useAuth } from '../hooks/useAuth';
 import { api } from '../config/api';
 import CarteJauge from '../components/CarteJauge';
 import CarteAlerte from '../components/CarteAlerte';
-import { couleurs } from '../theme/colors';
+import { useTheme } from '../theme/ThemeContext';
 
 const largeurEcran = Dimensions.get('window').width;
 
 export default function DashboardScreen() {
+  const { couleurs, modeActif } = useTheme();
   const { poubelles, chargement, rafraichir } = usePoubelles();
   const { alertes, rafraichir: rafraichirAlertes } = useAlertes();
   const { authentifie } = useAuth();
   const [poubelleSelectionnee, setPoubelleSelectionnee] = useState(null);
   const [historique, setHistorique] = useState([]);
   const [chargementHistorique, setChargementHistorique] = useState(false);
+
+  const styles = creerStyles(couleurs);
 
   async function ouvrirHistorique(poubelle) {
     setPoubelleSelectionnee(poubelle);
@@ -57,7 +60,7 @@ export default function DashboardScreen() {
         keyExtractor={(item) => String(item.id)}
         numColumns={2}
         contentContainerStyle={{ padding: 8 }}
-        refreshControl={<RefreshControl refreshing={chargement} onRefresh={rafraichir} colors={[couleurs.bleu]} />}
+        refreshControl={<RefreshControl refreshing={chargement} onRefresh={rafraichir} colors={[couleurs.bleu]} tintColor={couleurs.bleu} />}
         renderItem={({ item }) => <CarteJauge poubelle={item} onVoirHistorique={ouvrirHistorique} />}
         ListHeaderComponent={
           <View style={styles.entete}>
@@ -100,11 +103,12 @@ export default function DashboardScreen() {
                   height={220}
                   yAxisSuffix="%"
                   chartConfig={{
-                    backgroundColor: '#ffffff',
-                    backgroundGradientFrom: '#ffffff',
-                    backgroundGradientTo: '#ffffff',
+                    backgroundColor: couleurs.carte,
+                    backgroundGradientFrom: couleurs.carte,
+                    backgroundGradientTo: couleurs.carte,
                     decimalPlaces: 0,
-                    color: (opacity = 1) => `rgba(79, 124, 255, ${opacity})`,
+                    color: (opacity = 1) =>
+                      modeActif === 'sombre' ? `rgba(124, 157, 255, ${opacity})` : `rgba(79, 124, 255, ${opacity})`,
                     labelColor: () => couleurs.texteAtt,
                     propsForDots: { r: '3' },
                   }}
@@ -120,19 +124,21 @@ export default function DashboardScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  conteneur: { flex: 1, backgroundColor: couleurs.fond },
-  entete: { paddingHorizontal: 8, paddingTop: 8, paddingBottom: 4 },
-  titre: { fontSize: 20, fontWeight: '800', color: couleurs.texte },
-  sousTitre: { fontSize: 12, color: couleurs.texteAtt, marginTop: 4, marginBottom: 8 },
-  panneauAlertes: { backgroundColor: couleurs.carte, borderRadius: 16, margin: 8, padding: 14, borderWidth: 1, borderColor: couleurs.bordure },
-  enteteAlertes: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 10 },
-  titreAlertes: { fontSize: 15, fontWeight: '700', color: couleurs.texte, marginLeft: 6 },
-  badge: { marginLeft: 'auto', backgroundColor: 'rgba(239,68,68,0.12)', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 20 },
-  badgeTexte: { color: couleurs.rouge, fontWeight: '700', fontSize: 11 },
-  videTexte: { color: couleurs.texteAtt, fontSize: 13, paddingVertical: 10 },
-  modaleFond: { flex: 1, backgroundColor: 'rgba(15,23,42,0.5)', justifyContent: 'center', padding: 16 },
-  modaleContenu: { backgroundColor: 'white', borderRadius: 18, padding: 16, maxHeight: '80%' },
-  modaleEntete: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
-  modaleTitre: { fontSize: 15, fontWeight: '700', color: couleurs.texte, flex: 1 },
-});
+function creerStyles(couleurs) {
+  return StyleSheet.create({
+    conteneur: { flex: 1, backgroundColor: couleurs.fond },
+    entete: { paddingHorizontal: 8, paddingTop: 8, paddingBottom: 4 },
+    titre: { fontSize: 20, fontWeight: '800', color: couleurs.texte },
+    sousTitre: { fontSize: 12, color: couleurs.texteAtt, marginTop: 4, marginBottom: 8 },
+    panneauAlertes: { backgroundColor: couleurs.carte, borderRadius: 16, margin: 8, padding: 14, borderWidth: 1, borderColor: couleurs.bordure },
+    enteteAlertes: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 10 },
+    titreAlertes: { fontSize: 15, fontWeight: '700', color: couleurs.texte, marginLeft: 6 },
+    badge: { marginLeft: 'auto', backgroundColor: couleurs.rouge + '22', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 20 },
+    badgeTexte: { color: couleurs.rouge, fontWeight: '700', fontSize: 11 },
+    videTexte: { color: couleurs.texteAtt, fontSize: 13, paddingVertical: 10 },
+    modaleFond: { flex: 1, backgroundColor: 'rgba(15,23,42,0.6)', justifyContent: 'center', padding: 16 },
+    modaleContenu: { backgroundColor: couleurs.carte, borderRadius: 18, padding: 16, maxHeight: '80%' },
+    modaleEntete: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
+    modaleTitre: { fontSize: 15, fontWeight: '700', color: couleurs.texte, flex: 1 },
+  });
+}
