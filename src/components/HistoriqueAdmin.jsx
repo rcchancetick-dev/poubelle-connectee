@@ -2,18 +2,7 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { History, ArrowUpDown, FileDown, FileSpreadsheet, Filter } from 'lucide-react';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, Legend } from 'recharts';
-
-/**
- * HistoriqueAdmin.jsx
- * Panneau d'historique des poubelles pleines, avec tri (nom, date, intervalle
- * entre deux alertes), filtrage par plage de dates et par poubelle, un
- * graphique recapitulatif (nombre d'alertes par poubelle), et deux exports :
- *   - PDF : tableau + graphique inclus (jsPDF + jspdf-autotable + html2canvas)
- *   - Excel : feuille de calcul complete (SheetJS / xlsx)
- *
- * Les bibliotheques d'export sont chargees dynamiquement (import() a la
- * demande) pour ne pas alourdir le chargement initial du reste du site.
- */
+import { saveHistoriqueLocal, loadHistoriqueLocal } from '../offline/historique';
 
 function formatDateHeure(iso) {
   return new Date(iso).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
@@ -24,6 +13,7 @@ export default function HistoriqueAdmin() {
   const [statsParPoubelle, setStatsParPoubelle] = useState({});
   const [chargement, setChargement] = useState(true);
   const [erreur, setErreur] = useState(null);
+  const [offline, setOffline] = useState(false);
 
   const [tri, setTri] = useState('date');
   const [ordre, setOrdre] = useState('desc');
@@ -42,12 +32,19 @@ export default function HistoriqueAdmin() {
       if (dateFin) params.set('dateFin', dateFin);
 
       const reponse = await fetch(`/api/historique-poubelles?${params.toString()}`);
-      if (!reponse.ok) throw new Error('Impossible de charger l\'historique');
+      if (!reponse.ok) throw new Error("Impossible de charger l'historique");
       const donnees = await reponse.json();
       setHistorique(donnees.historique || []);
       setStatsParPoubelle(donnees.statsParPoubelle || {});
+      setOffline(false);
+      await saveHistoriqueLocal(donnees.historique || []);
     } catch (e) {
       setErreur(e.message);
+      const offlineData = await loadHistoriqueLocal();
+      if (offlineData && offlineData.length > 0) {
+        setHistorique(offlineData);
+        setOffline(true);
+      }
     } finally {
       setChargement(false);
     }
@@ -55,6 +52,14 @@ export default function HistoriqueAdmin() {
 
   useEffect(() => {
     chargerHistorique();
+  }, [chargerHistorique]);
+
+  useEffect(() => {
+    const onOnline = () => {
+      chargerHistorique();
+    };
+    window.addEventListener('online', onOnline);
+    return () => window.removeEventListener('online', onOnline);
   }, [chargerHistorique]);
 
   function basculerOrdre(nouveauTri) {
@@ -116,7 +121,6 @@ export default function HistoriqueAdmin() {
       document_.setTextColor(100);
       document_.text(`Genere le ${new Date().toLocaleString('fr-FR')}`, 40, 58);
 
-      // Capture le graphique affiche a l'ecran (bar chart Recharts) sous forme d'image
       if (graphiqueRef.current) {
         const canvas = await html2canvas(graphiqueRef.current, { scale: 2, backgroundColor: '#ffffff' });
         const image = canvas.toDataURL('image/png');
@@ -158,8 +162,12 @@ export default function HistoriqueAdmin() {
       <p className="texte-vide" style={{ marginBottom: '0.8rem' }}>
         Consultez, triez et exportez l'historique complet des alertes de remplissage, toutes poubelles confondues.
       </p>
+      {offline && (
+        <p className="texte-vide" style={{ marginBottom: '0.8rem', color: 'orange' }}>
+          Mode hors ligne : affichage du dernier historique sauvegardé.
+        </p>
+      )}
 
-      {/* --- Filtres --- */}
       <div className="formulaire" style={{ marginBottom: '1rem' }}>
         <div className="formulaire__ligne">
           <label>Date de début
@@ -190,7 +198,6 @@ export default function HistoriqueAdmin() {
         </div>
       </div>
 
-      {/* --- Boutons d'export --- */}
       <div style={{ display: 'flex', gap: '0.6rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
         <button className="bouton-secondaire" onClick={exporterPdf} disabled={exportEnCours !== null || historique.length === 0}>
           <FileDown size={14} /> {exportEnCours === 'pdf' ? 'Génération...' : 'Exporter en PDF'}
@@ -202,7 +209,6 @@ export default function HistoriqueAdmin() {
 
       {erreur && <p className="texte-erreur">{erreur}</p>}
 
-      {/* --- Graphique (nombre d'alertes par poubelle) --- */}
       {donneesGraphique.length > 0 && (
         <div ref={graphiqueRef} style={{ background: 'white', padding: '0.5rem', borderRadius: '10px', marginBottom: '1rem' }}>
           <ResponsiveContainer width="100%" height={220}>
@@ -218,7 +224,6 @@ export default function HistoriqueAdmin() {
         </div>
       )}
 
-      {/* --- Tableau de l'historique --- */}
       {chargement ? (
         <p className="texte-vide">Chargement de l'historique...</p>
       ) : historique.length === 0 ? (
